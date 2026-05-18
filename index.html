@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Clique Ici ! / Click Here !</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #121212;
+            color: #ffffff;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: background 0.3s;
+            perspective: 1000px;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        h1 {
+            font-size: 2rem;
+            text-align: center;
+            margin-bottom: 20px;
+            pointer-events: none;
+            z-index: 10;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .main-btn {
+            padding: 15px 35px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: white;
+            background: linear-gradient(45deg, #ff416c, #ff4b2b);
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(255, 65, 108, 0.4);
+            position: absolute;
+            transition: transform 0.1s ease, opacity 0.2s;
+            z-index: 100;
+            white-space: nowrap;
+            touch-action: none;
+        }
+
+        /* Fake buttons pour le niveau 4 */
+        .fake-btn {
+            position: absolute;
+            padding: 10px 20px;
+            font-size: 0.9rem;
+            background: #333;
+            color: #ccc;
+            border: 1px solid #444;
+            border-radius: 5px;
+            opacity: 0.7;
+            cursor: pointer;
+            z-index: 5;
+        }
+
+        /* Classes d'animations de chaos */
+        .shake {
+            animation: shakeAnim 0.1s infinite;
+        }
+
+        @keyframes shakeAnim {
+            0% { transform: translate(2px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(0px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(2px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(2px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+
+        /* Fake Popup style Windows ancien */
+        .popup {
+            position: absolute;
+            background: #c0c0c0;
+            border: 2px solid #fff;
+            border-right: 2px solid #808080;
+            border-bottom: 2px solid #808080;
+            color: black;
+            padding: 2px;
+            width: 280px;
+            font-family: monospace;
+            z-index: 1000;
+            box-shadow: 5px 5px 15px rgba(0,0,0,0.5);
+        }
+        .popup-title {
+            background: linear-gradient(90deg, #000080, #1084d0);
+            color: white;
+            padding: 3px 5px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+        }
+        .popup-body {
+            padding: 15px;
+            text-align: center;
+        }
+        .popup-btn {
+            background: #c0c0c0;
+            border: 2px solid #fff;
+            border-right: 2px solid #808080;
+            border-bottom: 2px solid #808080;
+            padding: 5px 15px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        /* Écran DVD Bouncing */
+        .dvd-mode {
+            position: absolute !important;
+            transition: none !important;
+        }
+
+        /* Stats absurdes en bas */
+        #stats {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            font-family: monospace;
+            font-size: 0.8rem;
+            color: #666;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <h1 id="instruction">Charge...</h1>
+        <button id="the-button" class="main-btn">Clique ici</button>
+        <div id="stats"></div>
+    </div>
+
+    <script>
+        // --- TRADUCTIONS ---
+        const i18n = {
+            fr: {
+                title: "La seule mission : clique sur le bouton.",
+                stats: "Clics ratés: {missed} | Patience restante: {patience}%",
+                btn_normal: "Clique ici",
+                lvl2_1: "Non.",
+                lvl2_2: "Tu crois vraiment que ça va marcher ?",
+                lvl2_3: "Arrête, j'ai des frissons.",
+                lvl2_4: "Je suis timide.",
+                lvl2_5: "Va dormir un peu.",
+                lvl2_6: "Erreur 404 : Volonté introuvable.",
+                lvl3_popup_title: "Alerte Système",
+                lvl3_popup_body: "Windows a quitté la conversation car ton niveau est trop faible.",
+                lvl5_giveup: "Ok... J'abandonne. Clique.",
+                sys_fail: "Tu bouges ton doigt comme un pigeon stressé."
+            },
+            en: {
+                title: "The only mission: click the button.",
+                stats: "Missed clicks: {missed} | Patience left: {patience}%",
+                btn_normal: "Click here",
+                lvl2_1: "Nope.",
+                lvl2_2: "Do you really think this will work?",
+                lvl2_3: "Stop, you're making me nervous.",
+                lvl2_4: "I'm shy.",
+                lvl2_5: "Go get some sleep.",
+                lvl2_6: "Error 404: Motivation not found.",
+                lvl3_popup_title: "System Alert",
+                lvl3_popup_body: "Windows left the chat because your skills are too low.",
+                lvl5_giveup: "Fine... I give up. Click me.",
+                sys_fail: "You move your finger like a stressed pigeon."
+            }
+        };
+
+        // Détection de la langue
+        const lang = navigator.language.startsWith('fr') ? 'fr' : 'en';
+        const txt = i18n[lang];
+
+        // --- VARIABLES DE JEU ---
+        let attempts = 0;
+        let currentLevel = 1;
+        let missedClicks = 0;
+        let patience = 100;
+        
+        const button = document.getElementById('the-button');
+        const instruction = document.getElementById('instruction');
+        const stats = document.getElementById('stats');
+        const container = document.getElementById('game-container');
+
+        // Initialisation textes
+        instruction.innerText = txt.title;
+        button.innerText = txt.btn_normal;
+        updateStats();
+
+        // Position initiale centrée proprement
+        setTimeout(() => { resetButtonPosition(); }, 100);
+
+        function updateStats() {
+            stats.innerText = txt.stats.replace('{missed}', missedClicks).replace('{patience}', Math.max(0, patience));
+        }
+
+        function resetButtonPosition() {
+            button.style.left = `${(window.innerWidth - button.offsetWidth) / 2}px`;
+            button.style.top = `${(window.innerHeight - button.offsetHeight) / 2}px`;
+        }
+
+        // --- COMPORTEMENT DE FUITE (Téléportation / Glisse) ---
+        function flee(e) {
+            attempts++;
+            missedClicks++;
+            patience = Math.max(0, patience - 3);
+            updateStats();
+
+            // Évolution des niveaux en fonction des tentatives
+            if (attempts > 5 && attempts <= 12) currentLevel = 2;
+            if (attempts > 12 && attempts <= 20) currentLevel = 3;
+            if (attempts > 20 && attempts <= 32) currentLevel = 4;
+            if (attempts > 32) currentLevel = 5;
+
+            // Gestion des effets selon le niveau
+            handleLevelEffects();
+
+            // Calcul de la fuite (Nouvelles coordonnées aléatoires sécurisées)
+            const padding = 40;
+            const maxX = window.innerWidth - button.offsetWidth - padding;
+            const maxY = window.innerHeight - button.offsetHeight - padding;
+
+            let newX = Math.random() * maxX;
+            let newY = Math.random() * maxY;
+
+            // Éviter que le bouton pop pile sous le doigt/curseur au coup d'après
+            if (e) {
+                const clientX = e.clientX || (e.touches ? e.touches[0].clientX : 0);
+                const clientY = e.clientY || (e.touches ? e.touches[0].clientY : 0);
+                if (Math.abs(newX - clientX) < 100 && Math.abs(newY - clientY) < 100) {
+                    newX = (newX + 200) % maxX;
+                    newY = (newY + 200) % maxY;
+                }
+            }
+
+            button.style.left = `${Math.max(padding, newX)}px`;
+            button.style.top = `${Math.max(padding, newY)}px`;
+        }
+
+        // --- GESTION DES NIVEAUX (CHAOS ENTRÉPIQUE) ---
+        function handleLevelEffects() {
+            // Niveau 2 : Le bouton parle et change de taille
+            if (currentLevel === 2) {
+                const quotes = [txt.lvl2_1, txt.lvl2_2, txt.lvl2_3, txt.lvl2_4, txt.lvl2_5, txt.lvl2_6];
+                button.innerText = quotes[Math.floor(Math.random() * quotes.length)];
+                
+                // Changement de taille absurde
+                const randomScale = 0.6 + Math.random() * 1.2;
+                button.style.transform = `scale(${randomScale})`;
+            }
+
+            // Niveau 3 : Le site panique (Tremblement, Popups, Changement de couleur de fond)
+            if (currentLevel === 3) {
+                document.body.classList.add('shake');
+                document.body.style.backgroundColor = ["#300", "#003", "#020", "#121212"][Math.floor(Math.random() * 4)];
+                
+                if (attempts % 3 === 0) {
+                    createFakePopup();
+                }
+                if(attempts === 14) {
+                    instruction.innerText = txt.sys_fail;
+                }
+            }
+
+            // Niveau 4 : Multiplication (Faux boutons)
+            if (currentLevel === 4) {
+                document.body.classList.remove('shake');
+                document.body.style.backgroundColor = "#121212";
+                if (document.querySelectorAll('.fake-btn').length < 40) {
+                    createFakeButtons();
+                }
+            }
+
+            // Niveau 5 : Abandon (et mode DVD bouncing pour le troll ultime)
+            if (currentLevel === 5) {
+                button.innerText = txt.lvl5_giveup;
+                button.style.transform = "scale(1)";
+                button.style.background = "linear-gradient(45deg, #00ff87, #60efff)";
+                button.style.color = "#000";
+                
+                // On retire les écouteurs de fuite pour qu'il se laisse cliquer !
+                button.removeEventListener('mouseenter', flee);
+                button.removeEventListener('touchstart', flee);
+                
+                startDvdMode();
+            }
+        }
+
+        // --- CRÉATION DE FAUX POPUPS (Niveau 3) ---
+        function createFakePopup() {
+            const popup = document.createElement('div');
+            popup.className = 'popup';
+            popup.style.left = `${Math.random() * (window.innerWidth - 280)}px`;
+            popup.style.top = `${Math.random() * (window.innerHeight - 150)}px`;
+            
+            popup.innerHTML = `
+                <div class="popup-title">
+                    <span>${txt.lvl3_popup_title}</span>
+                    <span style="cursor:pointer" onclick="this.closest('.popup').remove()">X</span>
+                </div>
+                <div class="popup-body">
+                    <p>${txt.lvl3_popup_body}</p>
+                    <button class="popup-btn" onclick="this.closest('.popup').remove()">OK</button>
+                </div>
+            `;
+            container.appendChild(popup);
+            
+            // Auto-destruction après 4 secondes pour ne pas figer le téléphone
+            setTimeout(() => { popup.remove(); }, 4000);
+        }
+
+        // --- CRÉATION DE MULTIPLES BOUTONS (Niveau 4) ---
+        function createFakeButtons() {
+            for (let i = 0; i < 25; i++) {
+                const fake = document.createElement('button');
+                fake.className = 'fake-btn';
+                fake.innerText = txt.btn_normal;
+                fake.style.left = `${Math.random() * (window.innerWidth - 100)}px`;
+                fake.style.top = `${Math.random() * (window.innerHeight - 50)}px`;
+                
+                // Si on clique sur un faux, il disparaît juste avec un texte moqueur
+                fake.addEventListener('click', () => {
+                    fake.innerText = "Nope.";
+                    setTimeout(() => fake.remove(), 500);
+                });
+                container.appendChild(fake);
+            }
+        }
+
+        // --- MODE BOUNCING DVD (Niveau 5) ---
+        let dvdInterval;
+        function startDvdMode() {
+            if (button.classList.contains('dvd-mode')) return;
+            button.classList.add('dvd-mode');
+
+            let x = parseFloat(button.style.left) || 100;
+            let y = parseFloat(button.style.top) || 100;
+            let speedX = 4;
+            let speedY = 4;
+
+            dvdInterval = setInterval(() => {
+                x += speedX;
+                y += speedY;
+
+                const maxX = window.innerWidth - button.offsetWidth;
+                const maxY = window.innerHeight - button.offsetHeight;
+
+                if (x >= maxX || x <= 0) speedX = -speedX;
+                if (y >= maxY || y <= 0) speedY = -speedY;
+
+                button.style.left = `${Math.max(0, Math.min(x, maxX))}px`;
+                button.style.top = `${Math.max(0, Math.min(y, maxY))}px`;
+            }, 16); // ~60fps
+        }
+
+        // --- REBOUTONNAGE FINAL (Quand l'utilisateur réussit enfin) ---
+        button.addEventListener('click', (e) => {
+            if (currentLevel < 5) {
+                // Sécurité anti-triche au cas où un clic passerait à travers l'événement tactile
+                flee(e);
+                return;
+            }
+            
+            // Si niveau 5 : Victoire et Reset !
+            clearInterval(dvdInterval);
+            alert(lang === 'fr' ? "Félicitations ! Tu as cliqué. Ton score d'entêtement est maximal. Partage le site à un ami maintenant ! 😂" : "Congratulations! You clicked it. Your stubbornness score is maxed out. Share this with a friend! 😂");
+            
+            // Nettoyage complet et reset
+            document.querySelectorAll('.fake-btn').forEach(b => b.remove());
+            document.querySelectorAll('.popup').forEach(p => p.remove());
+            button.classList.remove('dvd-mode');
+            attempts = 0;
+            currentLevel = 1;
+            missedClicks = 0;
+            patience = 100;
+            instruction.innerText = txt.title;
+            button.innerText = txt.btn_normal;
+            button.style.background = "linear-gradient(45deg, #ff416c, #ff4b2b)";
+            button.style.color = "white";
+            updateStats();
+            resetButtonPosition();
+            
+            // Réactivation des écouteurs de fuite
+            button.addEventListener('mouseenter', flee);
+            button.addEventListener('touchstart', flee);
+        });
+
+        // --- ÉCOUTEURS D'ÉVÉNEMENTS (Desktop + Mobile) ---
+        button.addEventListener('mouseenter', flee);
+        button.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // Empêche le double déclenchement clic/touch sur mobile
+            flee(e);
+        });
+
+        // Gérer le redimensionnement proprement
+        window.addEventListener('resize', () => {
+            if (currentLevel < 5) resetButtonPosition();
+        });
+    </script>
+</body>
+</html>
